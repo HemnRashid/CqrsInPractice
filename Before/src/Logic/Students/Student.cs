@@ -9,18 +9,30 @@ namespace Logic.Students
         public virtual string Name { get; set; }
         public virtual string Email { get; set; }
 
+        // for enrollment
         private readonly IList<Enrollment> _enrollments = new List<Enrollment>();
+
+        // Property
         public virtual IReadOnlyList<Enrollment> Enrollments => _enrollments.ToList();
+
+        // helper properties
         public virtual Enrollment FirstEnrollment => GetEnrollment(0);
         public virtual Enrollment SecondEnrollment => GetEnrollment(1);
 
+
+        // for disenorllment
         private readonly IList<Disenrollment> _disenrollments = new List<Disenrollment>();
+
+        // property
         public virtual IReadOnlyList<Disenrollment> Disenrollments => _disenrollments.ToList();
 
+
+        // contruktor
         protected Student()
         {
         }
 
+        // contructor 
         public Student(string name, string email)
             : this()
         {
@@ -28,7 +40,9 @@ namespace Logic.Students
             Email = email;
         }
 
-        private Enrollment GetEnrollment(int index)
+        // methods
+
+        public virtual Enrollment GetEnrollment(int index)
         {
             if (_enrollments.Count > index)
                 return _enrollments[index];
@@ -36,13 +50,9 @@ namespace Logic.Students
             return null;
         }
 
-        public virtual void RemoveEnrollment(Enrollment enrollment)
+        public virtual void RemoveEnrollment(Enrollment enrollment,string comment)
         {
             _enrollments.Remove(enrollment);
-        }
-
-        public virtual void AddDisenrollmentComment(Enrollment enrollment, string comment)
-        {
             var disenrollment = new Disenrollment(enrollment.Student, enrollment.Course, comment);
             _disenrollments.Add(disenrollment);
         }

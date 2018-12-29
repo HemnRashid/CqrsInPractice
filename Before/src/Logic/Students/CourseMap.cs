@@ -9,7 +9,7 @@ namespace Logic.Students
             Id(x => x.Id);
 
             Map(x => x.Name);
-            Map(x => x.Credits);
+            Map(x => x.Credits); 
         }
     }
 }
