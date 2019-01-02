@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Api.Dtos;
+using CSharpFunctionalExtensions;
 using Logic.Students;
 using Logic.Utils;
 using Microsoft.AspNetCore.Mvc;
@@ -14,15 +15,18 @@ namespace Api.Controllers
         private readonly UnitOfWork _unitOfWork;
         private readonly StudentRepository _studentRepository;
         private readonly CourseRepository _courseRepository;
+        private readonly Messages _messages;
 
-        public StudentController(UnitOfWork unitOfWork)
+        public StudentController(UnitOfWork unitOfWork, Messages messages)
         {
             _unitOfWork = unitOfWork;
             _studentRepository = new StudentRepository(unitOfWork);
             _courseRepository = new CourseRepository(unitOfWork);
+            _messages = messages;
+
         }
 
-        [HttpGet]
+        [HttpGet] // query, no change state of the resource.
         public IActionResult GetList(string enrolled, int? number)
         {
             IReadOnlyList<Student> students = _studentRepository.GetList(enrolled, number);
@@ -46,7 +50,7 @@ namespace Api.Controllers
             };
         }
 
-        [HttpPost]
+        [HttpPost] // command, change/ mutate state of the resource
         public IActionResult Register([FromBody] NewStudentDto dto)
         {
             var student = new Student(dto.Name, dto.Email);
@@ -69,7 +73,7 @@ namespace Api.Controllers
             return Ok();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id}")]// command,  it mutate the internal state, changing the state of the resource.
         public IActionResult Unregister(long id)
         {
             Student student = _studentRepository.GetById(id);
@@ -82,7 +86,7 @@ namespace Api.Controllers
             return Ok();
         }
 
-        [HttpPost("{id}/enrollments")]
+        [HttpPost("{id}/enrollments")] // command, change state of the resource
         public IActionResult Enroll(long id, [FromBody] StudentEnrollmentDto dto)
         {
             // check student exist
@@ -106,7 +110,7 @@ namespace Api.Controllers
             return Ok();
         }
 
-        [HttpPut("{id}/enrollments/{enrollmentNumber}")]
+        [HttpPut("{id}/enrollments/{enrollmentNumber}")] // command, change state of the resource
         public IActionResult Transfer(long id, int enrollmentNumber, [FromBody] StudentTransferDto dto)
         {
             // check student exist
@@ -135,7 +139,7 @@ namespace Api.Controllers
             return Ok();
         }
 
-        [HttpPut("{id}/enrollments/{enrollmentNumber}/deletion")]
+        [HttpPut("{id}/enrollments/{enrollmentNumber}/deletion")] // command, change state of the resource
         public IActionResult Disenroll(long id, int enrollmentNumber, [FromBody] StudentDisenrollmentDto dto)
         {
             // check student exist
@@ -150,31 +154,31 @@ namespace Api.Controllers
             var enrollment = student.GetEnrollment(enrollmentNumber);
             if (enrollment == null)
                 return Error($"No Enrollment found with number: '{enrollment}'");
-           
 
-            student.RemoveEnrollment(enrollment,dto.comment);
-           
+
+            student.RemoveEnrollment(enrollment, dto.comment);
+
             _unitOfWork.Commit();
 
             return Ok();
         }
 
-        [HttpPut("{id}/")]
+        [HttpPut("{id}/")] // command, change state of the resource
         public IActionResult EditPersonalInfo(long id, [FromBody] StudentPersonalInfoDto dto)
         {
-            // check student exist
-            Student student = _studentRepository.GetById(id);
-            if (student == null)
-                return Error($"No students found for id: '{id}'");
 
+            var command = new EditPersonalInfoCommand
+            {
+                Name = dto.Name,
+                Email = dto.Email,
+                Id = id
 
-            student.Name = dto.Name;
-            student.Email = dto.Email;
+            };
 
-
-            _unitOfWork.Commit();
-
-            return Ok();
+            //var handlder = new EditPersonalInfoCommandHandler(_unitOfWork);
+            //var result = handlder.Handle(command);
+            Result result = _messages.Dispatch(command);
+            return result.IsSuccess ? Ok() : Error(result.Error);
 
         }
 
