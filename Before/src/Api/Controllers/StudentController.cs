@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Api.Dtos;
+using Logic.Dtos;
 using CSharpFunctionalExtensions;
 using Logic.Students;
 using Logic.Utils;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Api.Controllers
+namespace Logic.Controllers
 {
     [Route("api/students")]
     public sealed class StudentController : BaseController
@@ -26,64 +26,41 @@ namespace Api.Controllers
 
         }
 
+        // refactor done
         [HttpGet] // query, no change state of the resource.
         public IActionResult GetList(string enrolled, int? number)
         {
-            IReadOnlyList<Student> students = _studentRepository.GetList(enrolled, number);
-            List<StudentDto> dtos = students.Select(x => ConvertToDto(x)).ToList();
-            return Ok(dtos);
+            //IReadOnlyList<Student> students = _studentRepository.GetList(enrolled, number);
+            //List<StudentDto> dtos = students.Select(x => ConvertToDto(x)).ToList();
+
+            List<StudentDto> list = _messages.Dispatch(new GetListQuery(enrolled, number));
+            return Ok(list);
+
+
         }
 
-        private StudentDto ConvertToDto(Student student)
-        {
-            return new StudentDto
-            {
-                Id = student.Id,
-                Name = student.Name,
-                Email = student.Email,
-                Course1 = student.FirstEnrollment?.Course?.Name,
-                Course1Grade = student.FirstEnrollment?.Grade.ToString(),
-                Course1Credits = student.FirstEnrollment?.Course?.Credits,
-                Course2 = student.SecondEnrollment?.Course?.Name,
-                Course2Grade = student.SecondEnrollment?.Grade.ToString(),
-                Course2Credits = student.SecondEnrollment?.Course?.Credits,
-            };
-        }
-
+        // refactor done.
         [HttpPost] // command, change/ mutate state of the resource
         public IActionResult Register([FromBody] NewStudentDto dto)
         {
-            var student = new Student(dto.Name, dto.Email);
+            var command = new RegisterCommand
+                (
+                dto.Name, dto.Email, dto.Course1, dto.Course1Grade, dto.Course2, dto.Course2Grade
+                );
 
-            if (dto.Course1 != null && dto.Course1Grade != null)
-            {
-                Course course = _courseRepository.GetByName(dto.Course1);
-                student.Enroll(course, Enum.Parse<Grade>(dto.Course1Grade));
-            }
-
-            if (dto.Course2 != null && dto.Course2Grade != null)
-            {
-                Course course = _courseRepository.GetByName(dto.Course2);
-                student.Enroll(course, Enum.Parse<Grade>(dto.Course2Grade));
-            }
-
-            _studentRepository.Save(student);
-            _unitOfWork.Commit();
-
-            return Ok();
+            Result result = _messages.Dispatch(command);
+            return result.IsSuccess ? Ok() : Error(result.Error);
         }
 
+        // refactor done
         [HttpDelete("{id}")]// command,  it mutate the internal state, changing the state of the resource.
         public IActionResult Unregister(long id)
         {
-            Student student = _studentRepository.GetById(id);
-            if (student == null)
-                return Error($"No student found for Id {id}");
+            var command = new UnRegisterCommand(id);
 
-            _studentRepository.Delete(student);
-            _unitOfWork.Commit();
+            Result result = _messages.Dispatch(command);
 
-            return Ok();
+            return result.IsSuccess ? Ok() : Error(result.Error);
         }
 
         [HttpPost("{id}/enrollments")] // command, change state of the resource
@@ -138,7 +115,7 @@ namespace Api.Controllers
 
             return Ok();
         }
-
+        
         [HttpPut("{id}/enrollments/{enrollmentNumber}/deletion")] // command, change state of the resource
         public IActionResult Disenroll(long id, int enrollmentNumber, [FromBody] StudentDisenrollmentDto dto)
         {
@@ -148,7 +125,7 @@ namespace Api.Controllers
                 return Error($"No students found for id: '{id}'");
             // Check course exists
 
-            if (string.IsNullOrEmpty(dto.comment))
+            if (string.IsNullOrEmpty(dto.Comment))
                 return Error($"Disenrollemnt comment is required!");
 
             var enrollment = student.GetEnrollment(enrollmentNumber);
@@ -156,27 +133,22 @@ namespace Api.Controllers
                 return Error($"No Enrollment found with number: '{enrollment}'");
 
 
-            student.RemoveEnrollment(enrollment, dto.comment);
+            student.RemoveEnrollment(enrollment, dto.Comment);
 
             _unitOfWork.Commit();
 
             return Ok();
         }
 
+        // refactor done 
         [HttpPut("{id}/")] // command, change state of the resource
         public IActionResult EditPersonalInfo(long id, [FromBody] StudentPersonalInfoDto dto)
         {
 
-            var command = new EditPersonalInfoCommand
-            {
-                Name = dto.Name,
-                Email = dto.Email,
-                Id = id
-
-            };
-
             //var handlder = new EditPersonalInfoCommandHandler(_unitOfWork);
             //var result = handlder.Handle(command);
+
+            var command = new EditPersonalInfoCommand(id, dto.Name, dto.Email);
             Result result = _messages.Dispatch(command);
             return result.IsSuccess ? Ok() : Error(result.Error);
 

@@ -1,4 +1,5 @@
-﻿namespace Api.Dtos
+﻿
+namespace Logic.Dtos
 {
     public sealed class NewStudentDto
     {

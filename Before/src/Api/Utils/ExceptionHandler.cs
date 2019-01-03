@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 
-namespace Api.Utils
+namespace Logic.Utils
 {
     public sealed class ExceptionHandler
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Api.Dtos
+namespace Logic.Dtos
 {
     public class StudentPersonalInfoDto
     {

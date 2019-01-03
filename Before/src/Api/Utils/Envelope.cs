@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Api.Utils
+namespace Logic.Utils
 {
     public class Envelope<T>
     {

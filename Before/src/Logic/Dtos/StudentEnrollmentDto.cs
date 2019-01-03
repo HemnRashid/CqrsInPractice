@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Api.Dtos
+namespace Logic.Dtos
 {
-
-    public class StudentTransferDto
+    public class StudentEnrollmentDto
     {
         public string Course { get; set; }
 

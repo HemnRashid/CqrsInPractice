@@ -1,7 +1,7 @@
-﻿using Api.Utils;
+﻿using Logic.Utils;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Api.Controllers
+namespace Logic.Controllers
 {
     public class BaseController : Controller
     {
