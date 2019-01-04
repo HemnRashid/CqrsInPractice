@@ -45,7 +45,12 @@ namespace Logic.Controllers
         {
             var command = new RegisterCommand
                 (
-                dto.Name, dto.Email, dto.Course1, dto.Course1Grade, dto.Course2, dto.Course2Grade
+                name: dto.Name,
+                email: dto.Email,
+                course1: dto.Course1,
+                course1Grade: dto.Course1Grade,
+                course2: dto.Course2,
+                course2Grade: dto.Course2Grade
                 );
 
             Result result = _messages.Dispatch(command);
@@ -56,88 +61,39 @@ namespace Logic.Controllers
         [HttpDelete("{id}")]// command,  it mutate the internal state, changing the state of the resource.
         public IActionResult Unregister(long id)
         {
-            var command = new UnRegisterCommand(id);
-
-            Result result = _messages.Dispatch(command);
-
+            Result result = _messages.Dispatch(new UnRegisterCommand(id));
             return result.IsSuccess ? Ok() : Error(result.Error);
         }
 
+        // refactor done 
         [HttpPost("{id}/enrollments")] // command, change state of the resource
         public IActionResult Enroll(long id, [FromBody] StudentEnrollmentDto dto)
         {
-            // check student exist
-            Student student = _studentRepository.GetById(id);
-            if (student == null)
-                return Error($"No students found for id: '{id}'");
-            // Check course exists
-            Course cource = _courseRepository.GetByName(dto.Course);
-            if (cource == null)
-                return Error($"cource is incorrct: '{dto.Course}'");
-            // check if Grade is Correct Enum
-            bool success = Enum.TryParse(dto.Grade, out Grade grade);
+            var command = new EnrollCommand(id, dto.Course, dto.Grade);
+            Result result = _messages.Dispatch(command);
+            return result.IsSuccess ? Ok() : Error(result.Error);
 
-            if (!success)
-                return Error($"Grade is incorrect: '{dto.Grade}'");
 
-            // enroll // registrera course on student.
-            student.Enroll(cource, grade);
-            _unitOfWork.Commit();
-
-            return Ok();
         }
 
+        // refactor done.
         [HttpPut("{id}/enrollments/{enrollmentNumber}")] // command, change state of the resource
         public IActionResult Transfer(long id, int enrollmentNumber, [FromBody] StudentTransferDto dto)
         {
-            // check student exist
-            Student student = _studentRepository.GetById(id);
-            if (student == null)
-                return Error($"No students found for id: '{id}'");
-            // Check course exists
-
-            Course course = _courseRepository.GetByName(dto.Course);
-            if (course == null)
-                return Error($"cource is incorrct: '{dto.Course}'");
-            // check if Grade is Correct Enum
-            bool success = Enum.TryParse(dto.Grade, out Grade grade);
-
-            if (!success)
-                return Error($"Grade is incorrect: '{dto.Grade}'");
-
-            var enrollment = student.GetEnrollment(enrollmentNumber);
-            if (enrollment == null)
-                return Error($"No Enrollment found with number: '{enrollment}'");
-            Enrollment firstEnrollment = student.FirstEnrollment;
-
-            firstEnrollment.Update(course, grade);
-            _unitOfWork.Commit();
-
-            return Ok();
+            var command = new TransferCommand(id, enrollmentNumber, dto.Course, dto.Grade);
+            Result result = _messages.Dispatch(command);
+            return result.IsSuccess ? Ok() : Error(result.Error);
         }
-        
+
+        // Refactor done 
         [HttpPut("{id}/enrollments/{enrollmentNumber}/deletion")] // command, change state of the resource
         public IActionResult Disenroll(long id, int enrollmentNumber, [FromBody] StudentDisenrollmentDto dto)
         {
-            // check student exist
-            Student student = _studentRepository.GetById(id);
-            if (student == null)
-                return Error($"No students found for id: '{id}'");
-            // Check course exists
 
-            if (string.IsNullOrEmpty(dto.Comment))
-                return Error($"Disenrollemnt comment is required!");
+            var command = new DisenrollmentCommand(id, enrollmentNumber, dto.Comment);
+            Result result = _messages.Dispatch(command);
+            return result.IsSuccess ? Ok() : Error(result.Error);
 
-            var enrollment = student.GetEnrollment(enrollmentNumber);
-            if (enrollment == null)
-                return Error($"No Enrollment found with number: '{enrollment}'");
-
-
-            student.RemoveEnrollment(enrollment, dto.Comment);
-
-            _unitOfWork.Commit();
-
-            return Ok();
         }
 
         // refactor done 

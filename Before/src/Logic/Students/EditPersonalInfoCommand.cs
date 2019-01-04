@@ -153,7 +153,7 @@ namespace Logic.Students
 
     }
 
-    public sealed class RegisterCommandHandler:ICommandHandler<RegisterCommand>
+    public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand>
     {
         private readonly UnitOfWork _unitOfWork;
 
@@ -193,10 +193,10 @@ namespace Logic.Students
     }
 
 
-    public sealed class UnRegisterCommand :ICommand
+    public sealed class UnRegisterCommand : ICommand
     {
 
-        public long Id { get;}
+        public long Id { get; }
 
         public UnRegisterCommand(long id)
         {
@@ -204,11 +204,11 @@ namespace Logic.Students
         }
     }
 
-    public sealed class UnRegisterCommandHandler:ICommandHandler<UnRegisterCommand>
+    public sealed class UnRegisterCommandHandler : ICommandHandler<UnRegisterCommand>
     {
 
         private readonly UnitOfWork _unitOfWork;
-        public UnRegisterCommandHandler(UnitOfWork unitOfWork )
+        public UnRegisterCommandHandler(UnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
         }
@@ -220,7 +220,7 @@ namespace Logic.Students
             var studentRepository = new StudentRepository(_unitOfWork);
             Student student = studentRepository.GetById(command.Id);
             if (student == null)
-                 return Result.Fail($"No student found for Id {command.Id}");
+                return Result.Fail($"No student found for Id {command.Id}");
 
             studentRepository.Delete(student);
             _unitOfWork.Commit();
@@ -230,5 +230,176 @@ namespace Logic.Students
         }
 
 
+    }
+
+
+    public sealed class EnrollCommand : ICommand
+    {
+        public long Id { get; }
+        public string Course { get; }
+
+        public string Grade { get; }
+
+
+
+        public EnrollCommand(long id, string course, string grade)
+        {
+            Id = id;
+            Course = course;
+            Grade = grade;
+        }
+    }
+
+
+    public sealed class EnrolledCommandHandler : ICommandHandler<EnrollCommand>
+    {
+        private readonly UnitOfWork _unitOfWork;
+
+        public EnrolledCommandHandler(UnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
+        public Result Handle(EnrollCommand command)
+        {
+
+            var studentRepository = new StudentRepository(_unitOfWork);
+            var courseRepository = new CourseRepository(_unitOfWork);
+            // check student exist
+            Student student = studentRepository.GetById(command.Id);
+            if (student == null)
+                return Result.Fail($"No students found for id: '{command.Id}'");
+            // Check course exists
+            Course cource = courseRepository.GetByName(command.Course);
+            if (cource == null)
+                return Result.Fail($"cource is incorrct: '{command.Course}'");
+            // check if Grade is Correct Enum
+            bool success = Enum.TryParse(command.Grade, out Grade grade);
+
+            if (!success)
+                return Result.Fail($"Grade is incorrect: '{command.Grade}'");
+
+            // enroll // registrera course on student.
+            student.Enroll(cource, grade);
+            _unitOfWork.Commit();
+
+            return Result.Ok();
+
+        }
+    }
+
+
+    public sealed class DisenrollmentCommand : ICommand
+    {
+        public long Id { get; }
+        public int EnrollmentNumber { get; }
+        public string Comment { get; }
+
+
+        public DisenrollmentCommand(long id, int enrollmentNumber, string comment)
+        {
+            Id = id;
+            EnrollmentNumber = enrollmentNumber;
+            Comment = comment;
+        }
+    }
+    public sealed class DisenrollmentCommandHandler : ICommandHandler<DisenrollmentCommand>
+    {
+
+        private readonly UnitOfWork _unitOfWork;
+
+        public DisenrollmentCommandHandler(UnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
+        public Result Handle(DisenrollmentCommand command)
+        {
+
+            var studentRepository = new StudentRepository(_unitOfWork);
+
+            // check student exist
+            Student student = studentRepository.GetById(command.Id);
+            if (student == null)
+                return Result.Fail($"No students found for id: '{command.Id}'");
+            // Check course exists
+
+            if (string.IsNullOrEmpty(command.Comment))
+                return Result.Fail($"Disenrollemnt comment is required!");
+
+            var enrollment = student.GetEnrollment(command.EnrollmentNumber);
+            if (enrollment == null)
+                return Result.Fail($"No Enrollment found with number: '{enrollment}'");
+
+
+            student.RemoveEnrollment(enrollment, command.Comment);
+            _unitOfWork.Commit();
+
+            return Result.Ok();
+
+        }
+    }
+
+
+    public sealed class TransferCommand : ICommand
+    {
+        public long Id { get; }
+        public int EnrollmentNumber { get; }
+
+        public string Course { get; }
+
+        public string Grade { get; }
+
+
+        public TransferCommand(long id, int enrollmentNumber, string course, string grade)
+        {
+            Id = id;
+            EnrollmentNumber = enrollmentNumber;
+            Course = course;
+            Grade = grade;
+        }
+    }
+
+    public sealed class TransferCommandHandler : ICommandHandler<TransferCommand>
+    {
+        private readonly UnitOfWork _unitOfWork;
+
+        public TransferCommandHandler(UnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
+        public Result Handle(TransferCommand command)
+        {
+
+            var studentRepository = new StudentRepository(_unitOfWork);
+            var courseRepository = new CourseRepository(_unitOfWork);
+
+            // check student exist
+            Student student = studentRepository.GetById(command.Id);
+            if (student == null)
+                return Result.Fail($"No students found for id: '{command.Id}'");
+            // Check course exists
+
+            Course course = courseRepository.GetByName(command.Course);
+            if (course == null)
+                return Result.Fail($"cource is incorrct: '{command.Course}'");
+            // check if Grade is Correct Enum
+            bool success = Enum.TryParse(command.Grade, out Grade grade);
+
+            if (!success)
+                return Result.Fail($"Grade is incorrect: '{command.Grade}'");
+
+            var enrollment = student.GetEnrollment(command.EnrollmentNumber);
+            if (enrollment == null)
+                return Result.Fail($"No Enrollment found with number: '{enrollment}'");
+
+            Enrollment firstEnrollment = student.FirstEnrollment;
+
+            firstEnrollment.Update(course, grade);
+            _unitOfWork.Commit();
+
+            return Result.Ok();
+        }
     }
 }
